@@ -19,19 +19,20 @@
 
 
 (defun execute-script (db script)
-  (assert (probe-file script))
-  (flet ((emptyp (string)
-           (zerop (length string))))
-    (with-transaction db
-      (loop for statement in (uiop:split-string (uiop:read-file-string script) :separator '(#\;))
-            when (not (emptyp (ppcre:regex-replace-all "\\s+" statement "")))
-              do (execute-non-query db statement)))))
+  (when (probe-file script)
+    (flet ((emptyp (string)
+             (zerop (length string))))
+      (with-transaction db
+        (loop for statement in (uiop:split-string (uiop:read-file-string script) :separator '(#\;))
+              when (not (emptyp (ppcre:regex-replace-all "\\s+" statement "")))
+                do (execute-non-query db statement))))))
 
 
 (defun migrate (db directory &key allow-deletions)
   (execute-script db (merge-pathnames "pre.sql" directory))
   (with-open-database (pristine ":memory:")
-    (execute-script pristine (merge-pathnames "schema.sql" directory))
+    (execute-script pristine (or (probe-file (merge-pathnames "schema.sql" directory))
+                                 (error "No schema.sql found in ~A" directory)))
     (let ((n-changes 0))
       (labels ((exec (description sql &rest args)
                  (v:info :exec "~A - ~A" description sql)
