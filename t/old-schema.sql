@@ -7,6 +7,10 @@ CREATE TABLE Node(
   something_else TEXT);
 CREATE UNIQUE INDEX Node_node_id on Node(node_id);
 
+INSERT INTO Node (node_id, something_else)
+VALUES
+('123', 'old');
+
 CREATE TABLE Job(
   node_oid INTEGER NOT NULL,
   id INTEGER NOT NULL,

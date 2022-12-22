@@ -19,21 +19,20 @@
 
 
 (defun execute-script (db script)
+  (assert (probe-file script))
   (flet ((emptyp (string)
            (zerop (length string))))
     (with-transaction db
-      (loop for statement in (uiop:split-string script :separator '(#\;))
+      (loop for statement in (uiop:split-string (uiop:read-file-string script) :separator '(#\;))
             when (not (emptyp (ppcre:regex-replace-all "\\s+" statement "")))
               do (execute-non-query db statement)))))
 
 
-(defun migrate (db schema &key allow-deletions)
+(defun migrate (db directory &key allow-deletions)
+  (execute-script db (merge-pathnames "pre.sql" directory))
   (with-open-database (pristine ":memory:")
-    (execute-script pristine schema)
-    (let ((orig-foreign-keys (progn
-                               (v:info :exec "Disable foreign keys temporarily for migration")
-                               (execute-single db "PRAGMA foreign_keys = OFF")))
-          (n-changes 0))
+    (execute-script pristine (merge-pathnames "schema.sql" directory))
+    (let ((n-changes 0))
       (labels ((exec (description sql &rest args)
                  (v:info :exec "~A - ~A" description sql)
                  (apply 'execute-to-list db sql args)
@@ -89,7 +88,6 @@
                                                              (format nil "PRAGMA table_info(~A)" tbl-name))
                                                  collect (second col)))
                             (removed-cols (set-difference cols pristine-cols :test #'string=)))
-                       (break)
                        (exec (format nil "Columns change: Create table ~A with updated schema" tbl-name)
                              create-table-sql)
                        (if (and removed-cols (not allow-deletions))
@@ -127,4 +125,5 @@
                 (error "Database migration: Would fail foreign_key_check")))))
         (migrate-pragma "foreign_keys")
         (when (> n-changes 0)
-          (execute-non-query db "VACUUM"))))))
+          (execute-non-query db "VACUUM"))
+        (execute-script db (merge-pathnames "post.sql" directory))))))
