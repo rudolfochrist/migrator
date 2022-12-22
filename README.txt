@@ -16,9 +16,8 @@
 ==========
 
   ,----
-  | (let ((schema (uiop:read-file-string "schema.sql")))
-  |   (sqlite:with-open-database (db "db.sqlite3")
-  |     (migrator:migrate db schema :allow-deletions t)))
+  | (sqlite:with-open-database (db "db.sqlite3")
+  |   (migrator:migrate db #p"migrations/" :allow-deletions t))
   `----
 
 
@@ -63,6 +62,10 @@
      But only if `allow-deletions' is non-nil.  If the new schema
      requires a column/table to be deleted and `allow-deletions' is nil
      this function will signal an error.
+
+  `directory' must contain a `schema.sql' file that gets
+  loaded. Optionally `directory' can contain a `pre.sql' and `post.sql'
+  hooks to do some pre or post works, like data migrations etc.
 
 
 5 AUTHOR
