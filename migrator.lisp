@@ -35,7 +35,7 @@
                                  (error "No schema.sql found in ~A" directory)))
     (let ((n-changes 0))
       (labels ((exec (description sql &rest args)
-                 (v:info :exec "~A - ~A" description sql)
+                 (v:info :migrator "~A - ~A" description sql)
                  (apply 'execute-to-list db sql args)
                  (incf n-changes))
                (migrate-pragma (pragma)
